@@ -10,7 +10,7 @@ const firebaseConfig = {
   authDomain: 'studio-5115947685-97557.firebaseapp.com',
   measurementId: '',
   messagingSenderId: '804290117937',
-  databaseURL: 'https://studio-5115947685-97557-default-rtdb.firebaseio.com',
+  // By removing the databaseURL, the SDK will automatically use the default database.
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
