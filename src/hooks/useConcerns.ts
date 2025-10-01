@@ -2,7 +2,7 @@
 
 import {useState, useEffect} from 'react';
 import {db} from '@/lib/firebase';
-import {ref, onValue, set, push, serverTimestamp} from 'firebase/database';
+import {ref, onValue, set, push, update} from 'firebase/database';
 import type {Concern, User} from '@/lib/types';
 import {initialConcerns} from '@/lib/data';
 
@@ -18,18 +18,25 @@ export function useConcerns() {
         const concernsList: Concern[] = Object.keys(data).map(key => ({
           ...data[key],
           id: key,
-          // Ensure upvotedBy is always an array
+          // Firebase returns objects for arrays, so we convert it back.
           upvotedBy: data[key].upvotedBy ? Object.values(data[key].upvotedBy) : [],
         }));
         setConcerns(concernsList);
       } else {
         // Seed the database if it's empty
+        const initialConcernsToSeed: {[key: string]: Omit<Concern, 'id'>} = {};
         initialConcerns.forEach(concern => {
-          const newConcernRef = push(concernsRef);
-          set(newConcernRef, concern);
+            const newConcernRef = push(concernsRef);
+            if (newConcernRef.key) {
+                initialConcernsToSeed[newConcernRef.key] = concern;
+            }
         });
+        update(concernsRef, initialConcernsToSeed);
       }
       setLoading(false);
+    }, (error) => {
+        console.error("Firebase read failed: " + error.message);
+        setLoading(false);
     });
 
     return () => unsubscribe();
@@ -62,11 +69,12 @@ export function useConcerns() {
       const concernRef = ref(db, `concerns/${concernId}`);
       const newUpvotedBy = [...upvotedBy, user.apartmentNumber];
       
-      set(concernRef, {
-        ...concern,
-        upvotes: concern.upvotes + 1,
-        upvotedBy: newUpvotedBy,
-      });
+      const updates: Partial<Concern> = {
+          upvotes: (concern.upvotes || 0) + 1,
+          upvotedBy: newUpvotedBy,
+      }
+
+      update(concernRef, updates);
     }
   };
 
