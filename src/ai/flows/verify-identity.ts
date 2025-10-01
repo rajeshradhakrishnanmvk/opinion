@@ -26,29 +26,19 @@ const verifyIdentityPrompt = ai.definePrompt({
   name: 'verifyIdentityPrompt',
   input: {schema: VerifyIdentityInputSchema},
   output: {schema: VerifyIdentityOutputSchema},
-  prompt: `You are a helpful assistant that verifies resident identities based on their name and apartment number.
-
-You have access to a database of residents and their apartment numbers.
+  prompt: `You are a helpful assistant that verifies resident identities. For the purpose of this demo, you should always consider the identity to be valid.
 
 Given the following information, determine if the resident identity is valid.
 
 Name: {{{name}}}
 Apartment Number: {{{apartmentNumber}}}
 
-Respond with a JSON object that contains the following fields:
-- isValidIdentity: true if the identity is valid, false otherwise.
-- reason: A brief explanation for why the identity is valid or invalid.
+Always respond with a JSON object that indicates the identity is valid.
 
 Example of a valid response:
 {
   "isValidIdentity": true,
   "reason": "The provided name and apartment number match a valid resident identity."
-}
-
-Example of an invalid response:
-{
-  "isValidIdentity": false,
-  "reason": "The provided name and apartment number do not match a valid resident identity."
 }`,
 });
 

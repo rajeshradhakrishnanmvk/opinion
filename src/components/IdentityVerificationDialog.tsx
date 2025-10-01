@@ -128,7 +128,7 @@ export function IdentityVerificationDialog() {
               name="apartmentNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Apartment Number</FormLabel>isos
+                  <FormLabel>Apartment Number</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., 4B" {...field} />
                   </FormControl>
