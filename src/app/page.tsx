@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { useState } from "react";
-import type { Concern, User } from "@/lib/types";
-import { initialConcerns } from "@/lib/data";
+import type { Concern } from "@/lib/types";
 import { UserProvider, useUser } from "@/contexts/UserContext";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -11,9 +10,11 @@ import { Header } from "@/components/Header";
 import { ConcernCard } from "@/components/ConcernCard";
 import { NewConcernDialog } from "@/components/NewConcernDialog";
 import { IdentityVerificationDialog } from "@/components/IdentityVerificationDialog";
+import { useConcerns } from "@/hooks/useConcerns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function OpinionApp() {
-  const [concerns, setConcerns] = useState<Concern[]>(initialConcerns);
+  const { concerns, loading, createConcern, upvoteConcern } = useConcerns();
   const { user, setIdentityDialogOpen, setPendingAction } = useUser();
   const [isNewConcernDialogOpen, setNewConcernDialogOpen] = useState(false);
 
@@ -28,34 +29,12 @@ function OpinionApp() {
 
   const handleUpvote = (concernId: string) => {
     if (!user) return;
-
-    setConcerns((prevConcerns) =>
-      prevConcerns.map((c) => {
-        if (c.id === concernId && !c.upvotedBy.includes(user.apartmentNumber)) {
-          return {
-            ...c,
-            upvotes: c.upvotes + 1,
-            upvotedBy: [...c.upvotedBy, user.apartmentNumber],
-          };
-        }
-        return c;
-      })
-    );
+    upvoteConcern(concernId, user);
   };
 
   const handleCreateConcern = (title: string, description: string) => {
     if (!user) return;
-    const newConcern: Concern = {
-      id: crypto.randomUUID(),
-      title,
-      description,
-      authorName: user.name,
-      apartmentNumber: user.apartmentNumber,
-      upvotes: 1,
-      upvotedBy: [user.apartmentNumber],
-      createdAt: new Date(),
-    };
-    setConcerns((prev) => [newConcern, ...prev]);
+    createConcern(title, description, user);
     setNewConcernDialogOpen(false);
   };
 
@@ -78,13 +57,21 @@ function OpinionApp() {
           </div>
 
           <div className="grid gap-6">
-            {sortedConcerns.map((concern) => (
-              <ConcernCard
-                key={concern.id}
-                concern={concern}
-                onUpvote={() => handleUpvote(concern.id)}
-              />
-            ))}
+            {loading ? (
+              <>
+                <Skeleton className="w-full h-[150px] rounded-lg" />
+                <Skeleton className="w-full h-[150px] rounded-lg" />
+                <Skeleton className="w-full h-[150px] rounded-lg" />
+              </>
+            ) : (
+              sortedConcerns.map((concern) => (
+                <ConcernCard
+                  key={concern.id}
+                  concern={concern}
+                  onUpvote={() => handleUpvote(concern.id)}
+                />
+              ))
+            )}
           </div>
         </div>
       </main>

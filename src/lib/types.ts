@@ -6,7 +6,7 @@ export type Concern = {
   apartmentNumber: string;
   upvotes: number;
   upvotedBy: string[]; // Array of apartmentNumbers that have upvoted
-  createdAt: Date;
+  createdAt: string; // ISO 8601 date string
 };
 
 export type User = {
