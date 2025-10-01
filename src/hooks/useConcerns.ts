@@ -14,7 +14,7 @@ export function useConcerns() {
     const concernsRef = ref(db, 'concerns');
     const unsubscribe = onValue(concernsRef, (snapshot) => {
       const data = snapshot.val();
-      if (snapshot.exists()) {
+      if (snapshot.exists() && data) {
         const concernsList: Concern[] = Object.keys(data).map(key => ({
           ...data[key],
           id: key,
@@ -23,6 +23,7 @@ export function useConcerns() {
         setConcerns(concernsList);
       } else {
         // If the 'concerns' node does not exist or is empty, seed it.
+        console.log("No concerns found in database, seeding with initial data.");
         const initialData: {[key: string]: Omit<Concern, 'id'>} = {};
         initialConcerns.forEach((concern) => {
           const newConcernRef = push(concernsRef);
@@ -30,11 +31,13 @@ export function useConcerns() {
             initialData[newConcernRef.key] = concern;
           }
         });
-        update(ref(db), { concerns: initialData });
+        update(ref(db), { concerns: initialData }).catch(err => {
+            console.error("Firebase seeding failed:", err);
+        });
       }
       setLoading(false);
     }, (error) => {
-        console.error("Firebase read failed: " + error.message);
+        console.error("Firebase read failed:", error);
         setLoading(false);
     });
 
