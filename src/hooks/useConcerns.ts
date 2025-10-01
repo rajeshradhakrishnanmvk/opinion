@@ -14,24 +14,23 @@ export function useConcerns() {
     const concernsRef = ref(db, 'concerns');
     const unsubscribe = onValue(concernsRef, (snapshot) => {
       const data = snapshot.val();
-      if (data) {
+      if (snapshot.exists()) {
         const concernsList: Concern[] = Object.keys(data).map(key => ({
           ...data[key],
           id: key,
-          // Firebase returns objects for arrays, so we convert it back.
           upvotedBy: data[key].upvotedBy ? Object.values(data[key].upvotedBy) : [],
         }));
         setConcerns(concernsList);
       } else {
-        // Seed the database if it's empty
-        const initialConcernsToSeed: {[key: string]: Omit<Concern, 'id'>} = {};
-        initialConcerns.forEach(concern => {
-            const newConcernRef = push(concernsRef);
-            if (newConcernRef.key) {
-                initialConcernsToSeed[newConcernRef.key] = concern;
-            }
+        // If the 'concerns' node does not exist or is empty, seed it.
+        const initialData: {[key: string]: Omit<Concern, 'id'>} = {};
+        initialConcerns.forEach((concern) => {
+          const newConcernRef = push(concernsRef);
+          if (newConcernRef.key) {
+            initialData[newConcernRef.key] = concern;
+          }
         });
-        update(concernsRef, initialConcernsToSeed);
+        update(ref(db), { concerns: initialData });
       }
       setLoading(false);
     }, (error) => {
