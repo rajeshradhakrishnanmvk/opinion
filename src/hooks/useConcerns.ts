@@ -2,9 +2,10 @@
 
 import {useState, useEffect} from 'react';
 import {db} from '@/lib/firebase';
-import {ref, onValue, set, push, update} from 'firebase/database';
+import {ref, onValue, set, push, update, get} from 'firebase/database';
 import type {Concern, User} from '@/lib/types';
 import {initialConcerns} from '@/lib/data';
+import {toast} from 'sonner';
 
 export function useConcerns() {
   const [concerns, setConcerns] = useState<Concern[]>([]);
@@ -12,37 +13,47 @@ export function useConcerns() {
 
   useEffect(() => {
     const concernsRef = ref(db, 'concerns');
-    const unsubscribe = onValue(concernsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (snapshot.exists() && data) {
-        const concernsList: Concern[] = Object.keys(data).map(key => ({
-          ...data[key],
-          id: key,
-          upvotedBy: data[key].upvotedBy ? Object.values(data[key].upvotedBy) : [],
-        }));
-        setConcerns(concernsList);
-      } else {
-        // If the 'concerns' node does not exist or is empty, seed it.
-        console.log("No concerns found in database, seeding with initial data.");
-        const initialData: {[key: string]: Omit<Concern, 'id'>} = {};
-        initialConcerns.forEach((concern) => {
-          const newConcernRef = push(concernsRef);
-          if (newConcernRef.key) {
-            initialData[newConcernRef.key] = concern;
-          }
+
+    const seedDatabase = async () => {
+        const snapshot = await get(concernsRef);
+        if (!snapshot.exists()) {
+            console.log("No concerns found in database, seeding with initial data.");
+            const initialData: {[key: string]: Omit<Concern, 'id'>} = {};
+            initialConcerns.forEach((concern) => {
+                const newConcernRef = push(concernsRef);
+                if (newConcernRef.key) {
+                    initialData[newConcernRef.key] = concern;
+                }
+            });
+            await update(ref(db), { concerns: initialData });
+        }
+    };
+
+    seedDatabase().then(() => {
+        const unsubscribe = onValue(concernsRef, (snapshot) => {
+            const data = snapshot.val();
+            if (snapshot.exists() && data) {
+                const concernsList: Concern[] = Object.keys(data).map(key => ({
+                    ...data[key],
+                    id: key,
+                    upvotedBy: data[key].upvotedBy ? Object.values(data[key].upvotedBy) : [],
+                }));
+                setConcerns(concernsList);
+            } else {
+                setConcerns([]);
+            }
+            setLoading(false);
+        }, (error) => {
+            console.error("Firebase read failed:", error);
+            setLoading(false);
         });
-        update(ref(db), { concerns: initialData }).catch(err => {
-            console.error("Firebase seeding failed:", err);
-        });
-      }
-      setLoading(false);
-    }, (error) => {
-        console.error("Firebase read failed:", error);
+
+        return () => unsubscribe();
+    }).catch(err => {
+        console.error("Firebase seeding check failed:", err);
         setLoading(false);
     });
-
-    return () => unsubscribe();
-  }, []);
+}, []);
 
   const createConcern = (title: string, description: string, user: User) => {
     const concernsRef = ref(db, 'concerns');
@@ -56,7 +67,14 @@ export function useConcerns() {
       upvotedBy: [user.apartmentNumber],
       createdAt: new Date().toISOString(),
     };
-    set(newConcernRef, newConcern);
+    set(newConcernRef, newConcern)
+      .then(() => {
+        toast.success("Concern submitted successfully!");
+      })
+      .catch((error) => {
+        toast.error("Failed to submit concern. Please try again.");
+        console.error("Firebase write failed:", error);
+      });
   };
 
   const upvoteConcern = (concernId: string, user: User) => {
