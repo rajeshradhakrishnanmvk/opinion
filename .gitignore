@@ -44,3 +44,8 @@ next-env.d.ts
 firebase-debug.log
 firestore-debug.log
 nammal-e6351-firebase-adminsdk-fbsvc-0862413ed0.json
+
+# CI/CD and deployment
+*.serviceaccount.json
+.firebase/
+.firebaserc
