@@ -5,3 +5,12 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+
+# Explicitly specify Node.js version to match package.json
+env:
+  NODE_VERSION: "20"
+
+# Build configuration for Next.js App Router
+buildConfig:
+  # Use npm for package management
+  packageManager: "npm"

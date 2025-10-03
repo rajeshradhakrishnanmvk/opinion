@@ -2,10 +2,12 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
-  output: 'export',
+  // Remove output: 'export' for Firebase App Hosting compatibility
+  // output: 'export',  // Commented out - not compatible with App Hosting
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
-  distDir: 'out',
+  // Remove distDir for Firebase App Hosting - it manages the build output
+  // distDir: 'out',  // Commented out - App Hosting manages this
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -13,6 +15,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
+    // Keep unoptimized for external images but App Hosting can handle optimization
     unoptimized: true,
     remotePatterns: [
       {
