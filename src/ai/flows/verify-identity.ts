@@ -1,8 +1,6 @@
 // This file verifies the identity of a user by checking their name and apartment number.
 // It exports the VerifyIdentityInput, VerifyIdentityOutput types, and the verifyIdentity function to call the flow.
 
-'use server';
-
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 

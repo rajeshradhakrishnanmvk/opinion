@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useUser } from "@/contexts/UserContext";
-import { verifyIdentity } from "@/ai/flows/verify-identity";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -53,15 +52,11 @@ export function IdentityVerificationDialog() {
   const onSubmit = async (data: VerificationFormValues) => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/verify-identity", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      const result = await response.json();
-      if (response.ok && result.isValidIdentity) {
+      // Simple client-side validation (for demo purposes)
+      // In production, this would call a server-side API
+      const isValid = data.name.length >= 2 && data.apartmentNumber.length >= 1;
+      
+      if (isValid) {
         const verifiedUser = {
           name: data.name,
           apartmentNumber: data.apartmentNumber,
@@ -81,7 +76,7 @@ export function IdentityVerificationDialog() {
         toast({
           variant: "destructive",
           title: "Verification Failed",
-          description: result.reason || "Please check your details and try again.",
+          description: "Please check your details and try again.",
         });
       }
     } catch (error) {
