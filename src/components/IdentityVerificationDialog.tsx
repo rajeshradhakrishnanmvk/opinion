@@ -53,8 +53,15 @@ export function IdentityVerificationDialog() {
   const onSubmit = async (data: VerificationFormValues) => {
     setIsLoading(true);
     try {
-      const result = await verifyIdentity(data);
-      if (result.isValidIdentity) {
+      const response = await fetch("/api/verify-identity", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
+      if (response.ok && result.isValidIdentity) {
         const verifiedUser = {
           name: data.name,
           apartmentNumber: data.apartmentNumber,

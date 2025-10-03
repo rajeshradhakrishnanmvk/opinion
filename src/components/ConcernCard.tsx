@@ -67,7 +67,9 @@ export function ConcernCard({ concern, onUpvote }: ConcernCardProps) {
         </CardContent>
         <CardFooter>
           <p className="text-xs text-muted-foreground">
-            {formatDistanceToNow(new Date(concern.createdAt), { addSuffix: true })}
+            {concern.createdAt && !isNaN(new Date(concern.createdAt).getTime())
+              ? formatDistanceToNow(new Date(concern.createdAt), { addSuffix: true })
+              : "Unknown time"}
           </p>
         </CardFooter>
       </div>
