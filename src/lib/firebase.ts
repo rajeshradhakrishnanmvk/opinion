@@ -2,18 +2,22 @@
 
 import {initializeApp, getApp, getApps} from 'firebase/app';
 import {getDatabase} from 'firebase/database';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  projectId: 'studio-5115947685-97557',
-  appId: '1:804290117937:web:d61a0bdecccea26a4c3010',
-  apiKey: 'AIzaSyCVMlDLH-bXFIuUlLdzItZ2BEbIupEgm-o',
-  authDomain: 'studio-5115947685-97557.firebaseapp.com',
-  databaseURL: 'https://studio-5115947685-97557-default-rtdb.firebaseio.com',
-  measurementId: '',
-  messagingSenderId: '804290117937',
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// Realtime Database (existing usage)
 const db = getDatabase(app);
+// Firestore (new optional usage)
+const firestore = getFirestore(app);
 
-export {app, db};
+export {app, db, firestore};
