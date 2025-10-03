@@ -6,7 +6,10 @@ on:
   pull_request:
     branches: [ main ]
     types: [ closed ]
-
+    
+permissions:
+  contents: write   # 👈 This is what lets GITHUB_TOKEN push commits
+  
 env:
   NODE_VERSION: '20'
   FIREBASE_PROJECT_ID: 'nammal-e6351'
@@ -63,23 +66,17 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-
-      - name: Build Application (SSR)
+      - name: Build Application
         run: npm run build
         env:
           NODE_ENV: production
 
-      - name: Setup Firebase CLI
+      - name: Deploy to Firebase Hosting
         uses: w9jds/firebase-action@master
         with:
-          args: --version
-
-      - name: Deploy to Firebase App Hosting (SSR)
-        run: |
-          npx firebase apphosting:deploy --project ${{ env.FIREBASE_PROJECT_ID }} --ci
+          args: deploy --only hosting --project ${{ env.FIREBASE_PROJECT_ID }}
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
 
       - name: Deploy Firestore Rules
         uses: w9jds/firebase-action@master
@@ -87,7 +84,6 @@ jobs:
           args: deploy --only firestore:rules --project ${{ env.FIREBASE_PROJECT_ID }}
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
 
       - name: Deploy Firestore Indexes
         uses: w9jds/firebase-action@master
@@ -95,7 +91,6 @@ jobs:
           args: deploy --only firestore:indexes --project ${{ env.FIREBASE_PROJECT_ID }}
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
 
   # Create Release Notes
   release:
@@ -179,7 +174,10 @@ jobs:
           git config --local user.name "GitHub Action"
           git add docs/releases/
           git commit -m "📝 Add release notes for deployment $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
           git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
@@ -194,9 +192,7 @@ jobs:
 
   # Notification Job
   notify:
-    name: 'Send Notifications'    git add package-lock.json
-    git commit -m "Update package-lock.json after adding ESLint dependencies"
-    git push
+    name: 'Send Notifications'
     runs-on: ubuntu-latest
     needs: [deploy, release]
     if: always() && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true))
@@ -207,6 +203,12 @@ jobs:
         run: |
           echo "✅ Deployment completed successfully!"
           echo "🌐 Application is live at: https://${FIREBASE_PROJECT_ID}.web.app"
+          
+      - name: Deployment Failure Notification
+        if: needs.deploy.result == 'failure'
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Please check the workflow logs for details."
           
       - name: Deployment Failure Notification
         if: needs.deploy.result == 'failure'

@@ -1,5 +1,7 @@
 # 🚀 Firebase CI/CD Pipeline - Complete Setup
 
+> **✅ Status Update (2025-10-03):** The firebase-deploy.yml workflow has been fixed and is now working correctly with Next.js static export. See [DEPLOYMENT_FIX.md](DEPLOYMENT_FIX.md) for details about the recent fixes.
+
 This repository now includes a fully automated CI/CD pipeline for deploying to Firebase. Here's what was created and configured:
 
 ## 📁 Created Files
