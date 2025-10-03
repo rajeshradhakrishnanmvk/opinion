@@ -1,0 +1,27 @@
+# Firebase App Hosting Debug Configuration
+# This file helps Firebase App Hosting understand the project structure
+
+# Project metadata
+project_id: nammal-e6351
+backend_id: opinion
+region: asia-southeast1
+
+# Build configuration
+build:
+  node_version: "20"
+  package_manager: "npm" 
+  build_command: "npm run build"
+  dev_command: "npm run dev"
+
+# Repository information
+repository:
+  owner: rajeshradhakrishnanmvk
+  name: opinion
+  branch: main
+
+# Last updated
+last_updated: 2025-10-03T15:45:00Z
+
+# Deployment status check
+# Check deployment: https://console.firebase.google.com/project/nammal-e6351/apphosting
+# Check backend: https://console.firebase.google.com/project/nammal-e6351/apphosting/backends/asia-southeast1:opinion

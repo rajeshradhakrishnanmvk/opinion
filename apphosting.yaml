@@ -14,3 +14,5 @@ env:
 buildConfig:
   # Use npm for package management
   packageManager: "npm"
+  
+# Force deployment trigger - updated at 2025-10-03T15:45:00Z
