@@ -171,7 +171,10 @@ jobs:
           git config --local user.name "GitHub Action"
           git add docs/releases/
           git commit -m "📝 Add release notes for deployment $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
           git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
