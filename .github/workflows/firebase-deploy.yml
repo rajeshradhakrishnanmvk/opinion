@@ -6,7 +6,10 @@ on:
   pull_request:
     branches: [ main ]
     types: [ closed ]
-
+    
+permissions:
+  contents: write   # 👈 This is what lets GITHUB_TOKEN push commits
+  
 env:
   NODE_VERSION: '20'
   FIREBASE_PROJECT_ID: 'nammal-e6351'
