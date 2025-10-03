@@ -10,7 +10,7 @@ import { Header } from "@/components/Header";
 import { ConcernCard } from "@/components/ConcernCard";
 import { NewConcernDialog } from "@/components/NewConcernDialog";
 import { IdentityVerificationDialog } from "@/components/IdentityVerificationDialog";
-import { useConcerns } from "@/hooks/useConcerns";
+import { useConcernsFirestore as useConcerns } from "@/hooks/useConcernsFirestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function OpinionApp() {
