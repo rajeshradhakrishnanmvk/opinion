@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /concerns/{concernId} {
+      // Allow public read access to concerns
+      allow read: if true;
+      
+      // Allow creating new concerns with proper structure
+      allow create: if request.resource.data.keys().hasAll(['title','description','authorName','apartmentNumber','upvotes','upvotedBy','createdAt'])
+        && request.resource.data.upvotes == 1
+        && request.resource.data.upvotedBy.size() == 1
+        && request.resource.data.upvotedBy[0] == request.resource.data.apartmentNumber;
+      
+      // Allow updating concerns for upvoting (incrementing upvotes and adding to upvotedBy)
+      allow update: if request.resource.data.keys().hasAll(['title','description','authorName','apartmentNumber','upvotes','upvotedBy','createdAt'])
+        && request.resource.data.title == resource.data.title
+        && request.resource.data.description == resource.data.description
+        && request.resource.data.authorName == resource.data.authorName
+        && request.resource.data.apartmentNumber == resource.data.apartmentNumber
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.upvotes > resource.data.upvotes
+        && request.resource.data.upvotedBy.size() > resource.data.upvotedBy.size();
+      
+      // Disallow deletes for data integrity
+      allow delete: if false;
+    }
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "studio-5115947685-97557"
-  }
+    "default": "nammal-e6351",
+    "nammal-app": "nammal-e6351"
+  },
+  "targets": {},
+  "etags": {}
 }
