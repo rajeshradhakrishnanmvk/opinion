@@ -95,9 +95,9 @@ build_app() {
     print_success "Build completed"
 }
 
-# Deploy to Firebase
+# Deploy to Firebase (App Hosting handles the app, we deploy config only)
 deploy_firebase() {
-    print_header "Deploying to Firebase"
+    print_header "Deploying Firebase Configuration"
     
     # Check if user is logged in
     if ! firebase projects:list &> /dev/null; then
@@ -105,18 +105,14 @@ deploy_firebase() {
         exit 1
     fi
     
-    print_warning "This will deploy to production project: $PROJECT_ID"
+    print_warning "This will deploy Firestore configuration to project: $PROJECT_ID"
+    print_warning "Firebase App Hosting will automatically deploy the application"
     read -p "Continue? (y/N) " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         print_warning "Deployment cancelled"
         exit 0
     fi
-    
-    # Deploy hosting
-    echo "Deploying to Firebase Hosting..."
-    firebase deploy --only hosting --project $PROJECT_ID
-    print_success "Hosting deployed"
     
     # Deploy Firestore rules
     echo "Deploying Firestore rules..."
@@ -128,21 +124,21 @@ deploy_firebase() {
     firebase deploy --only firestore:indexes --project $PROJECT_ID
     print_success "Firestore indexes deployed"
     
-    print_success "Deployment completed!"
-    echo -e "${GREEN}🌐 Your app is live at: https://${PROJECT_ID}.web.app${NC}"
+    print_success "Firebase configuration deployed!"
+    echo -e "${GREEN}🚀 Firebase App Hosting will automatically deploy your app${NC}"
+    echo -e "${GREEN}🌐 App URL: https://opinion--${PROJECT_ID}.asia-southeast1.hosted.app${NC}"
+    echo -e "${GREEN}🌍 Custom Domain: https://nammal.in${NC}"
 }
 
-# Preview deployment locally
+# Preview deployment locally (not applicable for App Hosting)
 preview_local() {
-    print_header "Starting Local Preview"
+    print_header "Starting Local Development Server"
     
-    if [ ! -d "out" ]; then
-        print_warning "Build directory not found. Building first..."
-        build_app
-    fi
+    print_warning "Firebase App Hosting doesn't support local preview"
+    print_warning "Starting Next.js development server instead..."
     
-    echo "Starting Firebase hosting emulator..."
-    firebase serve --only hosting --project $PROJECT_ID
+    echo "Starting Next.js development server..."
+    npm run dev
 }
 
 # Full pipeline (test, build, deploy)

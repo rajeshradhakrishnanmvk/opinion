@@ -46,9 +46,9 @@ jobs:
         env:
           NODE_ENV: production
 
-  # Deploy to Firebase
+  # Deploy to Firebase (Firestore only - App Hosting handles the app deployment)
   deploy:
-    name: 'Deploy to Firebase'
+    name: 'Deploy Firebase Configuration'
     runs-on: ubuntu-latest
     needs: test
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
@@ -66,17 +66,10 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Build Application
+      - name: Build Application (for validation)
         run: npm run build
         env:
           NODE_ENV: production
-
-      - name: Deploy to Firebase Hosting
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only hosting --project ${{ env.FIREBASE_PROJECT_ID }}
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
       - name: Deploy Firestore Rules
         uses: w9jds/firebase-action@master
@@ -91,6 +84,12 @@ jobs:
           args: deploy --only firestore:indexes --project ${{ env.FIREBASE_PROJECT_ID }}
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: App Hosting Info
+        run: |
+          echo "✅ Firestore configuration deployed"
+          echo "🚀 Firebase App Hosting will automatically deploy the application"
+          echo "📱 App URL: https://opinion--nammal-e6351.asia-southeast1.hosted.app"
 
   # Create Release Notes
   release:
@@ -141,12 +140,13 @@ jobs:
           ${COMMIT_HISTORY}
           
           ### 🔗 Deployment Links
-          - **Hosting URL:** https://${FIREBASE_PROJECT_ID}.web.app
+          - **App Hosting URL:** https://opinion--${FIREBASE_PROJECT_ID}.asia-southeast1.hosted.app
+          - **Custom Domain:** https://nammal.in
           - **Console:** https://console.firebase.google.com/project/${FIREBASE_PROJECT_ID}
           
           ### 📋 Deployment Details
-          - ✅ Application Build
-          - ✅ Firebase Hosting
+          - ✅ Application Build (validated)
+          - ✅ Firebase App Hosting (auto-deployed)
           - ✅ Firestore Rules
           - ✅ Firestore Indexes
           
@@ -201,8 +201,10 @@ jobs:
       - name: Deployment Success Notification
         if: needs.deploy.result == 'success'
         run: |
-          echo "✅ Deployment completed successfully!"
-          echo "🌐 Application is live at: https://${FIREBASE_PROJECT_ID}.web.app"
+          echo "✅ Firebase configuration deployed successfully!"
+          echo "🚀 Firebase App Hosting will automatically deploy your application"
+          echo "🌐 Application URL: https://opinion--${FIREBASE_PROJECT_ID}.asia-southeast1.hosted.app"
+          echo "🌍 Custom Domain: https://nammal.in"
           
       - name: Deployment Failure Notification
         if: needs.deploy.result == 'failure'
