@@ -1,56 +1,38 @@
 # Opinion - Community Concerns Board
 
 A Next.js application for managing community concerns with Firebase Realtime Database integration.
+# Opinion - Community Concerns Board
+
+A Next.js application for managing community concerns with Firebase **Firestore** integration (previous Realtime Database support removed in favor of Firestore's atomic operations and richer querying).
 
 ## Getting Started
 
 To get started, take a look at src/app/page.tsx.
 
-## Firebase Realtime Database Setup
+## Firestore Setup
 
 ### 1. Database Connection
 
-The application uses Firebase Realtime Database for persistent data storage. The database connection is configured in `src/lib/firebase.ts`.
+The application uses **Cloud Firestore** for persistent data storage. The client SDK is initialized in `src/lib/firebase.ts`. A Firestore-based React hook lives in `src/hooks/useConcernsFirestore.ts`.
 
 #### Required Configuration
 
-Ensure your Firebase configuration includes the `databaseURL`:
+Ensure your Firebase web config (no private key) is present; Firestore does not require a `databaseURL` field. Admin (MCP server) credentials are loaded from `.env.local`.
 
-```typescript
-const firebaseConfig = {
-  projectId: 'your-project-id',
-  appId: 'your-app-id',
-  apiKey: 'your-api-key',
-  authDomain: 'your-project.firebaseapp.com',
-  databaseURL: 'https://your-project-default-rtdb.firebaseio.com', // Required for Realtime Database
-  messagingSenderId: 'your-sender-id',
-};
-```
+### 2. Data Model (Firestore Collection: `concerns`)
 
-**Note:** The `databaseURL` is **required** for Firebase Realtime Database to work properly. Without it, data operations will fail silently.
+Each document in `concerns`:
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | string | Title of concern |
+| `description` | string | Detailed description |
+| `authorName` | string | Creator name |
+| `apartmentNumber` | string | Apartment identifier |
+| `upvotes` | number | Count of upvotes (length of `upvotedBy`) |
+| `upvotedBy` | string[] | Apartment numbers that upvoted |
+| `createdAt` | string (ISO) | Creation timestamp |
 
-### 2. Database Schema
-
-The application uses a simple flat structure in Firebase Realtime Database:
-
-```
-{
-  "concerns": {
-    "-UniqueKey1": {
-      "title": "Concern Title",
-      "description": "Detailed description of the concern",
-      "authorName": "John Doe",
-      "apartmentNumber": "2A",
-      "upvotes": 5,
-      "upvotedBy": ["2A", "3B", "4C"],
-      "createdAt": "2024-01-15T10:30:00.000Z"
-    },
-    "-UniqueKey2": {
-      // Another concern object
-    }
-  }
-}
-```
+Document ID is used as `id` in the UI.
 
 #### Schema Details
 
@@ -67,53 +49,15 @@ The application uses a simple flat structure in Firebase Realtime Database:
 | `upvotedBy` | array | Array of apartment numbers that have upvoted |
 | `createdAt` | string | ISO 8601 timestamp of when the concern was created |
 
-### 3. Database Operations
+### 3. Operations
 
-#### Reading Data
+The React hook (`useConcernsFirestore`) uses `onSnapshot` for real-time updates.
 
-The application uses `onValue` listener to subscribe to real-time updates:
+Creation uses `addDoc(collection(...))` and initializes `upvotes = 1`, `upvotedBy = [creatorApartment]`.
 
-```typescript
-const concernsRef = ref(db, 'concerns');
-const unsubscribe = onValue(concernsRef, (snapshot) => {
-  const data = snapshot.val();
-  // Process data
-});
-```
+Upvotes use `updateDoc` with updated arrays (UI) while the MCP server uses atomic `arrayUnion` & `increment`.
 
-#### Creating a Concern
-
-New concerns are created using `push` and `set`:
-
-```typescript
-const concernsRef = ref(db, 'concerns');
-const newConcernRef = push(concernsRef); // Generates unique key
-const newConcern = {
-  title: "Example",
-  description: "Description",
-  authorName: "John",
-  apartmentNumber: "2A",
-  upvotes: 1,
-  upvotedBy: ["2A"],
-  createdAt: new Date().toISOString(),
-};
-set(newConcernRef, newConcern);
-```
-
-#### Updating a Concern (Upvoting)
-
-Existing concerns are updated using `update`:
-
-```typescript
-const concernRef = ref(db, `concerns/${concernId}`);
-const updates = {
-  upvotes: newUpvoteCount,
-  upvotedBy: updatedArray,
-};
-update(concernRef, updates);
-```
-
-### 4. Setting Up Firebase Realtime Database
+### 4. Setting Up Firestore
 
 #### Step-by-Step Guide
 
@@ -121,11 +65,9 @@ update(concernRef, updates);
    - Go to [Firebase Console](https://console.firebase.google.com/)
    - Click "Add project" and follow the setup wizard
 
-2. **Enable Realtime Database**
-   - In your Firebase project, navigate to "Build" > "Realtime Database"
-   - Click "Create Database"
-   - Choose a location (e.g., `us-central1`)
-   - Start in **test mode** for development (set proper rules for production)
+2. **Enable Firestore**
+  - Build > Firestore Database > Create database
+  - Start in test mode (development only) OR apply the secure rules below.
 
 3. **Get Configuration Values**
    - Go to Project Settings (gear icon) > General
@@ -133,32 +75,28 @@ update(concernRef, updates);
    - Copy the Firebase configuration values
    - The `databaseURL` should be in the format: `https://[project-id]-default-rtdb.firebaseio.com`
 
-4. **Set Security Rules**
-   
-   For development (test mode):
-   ```json
-   {
-     "rules": {
-       ".read": true,
-       ".write": true
-     }
-   }
-   ```
+4. **Security Rules (Hardened Example)**
 
-   For production (recommended):
-   ```json
-   {
-     "rules": {
-       "concerns": {
-         ".read": true,
-         ".write": true,
-         "$concernId": {
-           ".validate": "newData.hasChildren(['title', 'description', 'authorName', 'apartmentNumber', 'upvotes', 'upvotedBy', 'createdAt'])"
-         }
-       }
-     }
-   }
-   ```
+Firestore rules (replace YOUR_PROJECT_ID if needed):
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /concerns/{concernId} {
+      allow read: if true; // Public read (adjust if you need auth)
+      allow create: if request.resource.data.keys().hasAll(['title','description','authorName','apartmentNumber','upvotes','upvotedBy','createdAt'])
+        && request.resource.data.upvotes == 1
+        && request.resource.data.upvotedBy.size() == 1;
+      allow update: if request.resource.data.keys().hasAll(['title','description','authorName','apartmentNumber','upvotes','upvotedBy','createdAt'])
+        && request.resource.data.upvotes == resource.data.upvotes + 1
+        && request.resource.data.upvotedBy.size() == resource.data.upvotedBy.size() + 1;
+      allow delete: if false; // Disallow deletes (adjust as needed)
+    }
+  }
+}
+```
+
+For quick local prototyping you can temporarily loosen, but revert to hardened rules before production.
 
 5. **Initialize Database**
    - The application automatically seeds initial data if the database is empty
