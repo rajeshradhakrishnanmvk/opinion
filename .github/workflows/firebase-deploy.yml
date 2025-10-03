@@ -1,0 +1,212 @@
+name: Firebase CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    types: [ closed ]
+
+env:
+  NODE_VERSION: '20'
+  FIREBASE_PROJECT_ID: 'nammal-e6351'
+
+jobs:
+  # Lint and Test Job
+  test:
+    name: 'Lint & Test'
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run TypeScript Check
+        run: npm run typecheck
+
+      - name: Run Linter
+        run: npm run lint
+
+      - name: Build Application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+  # Deploy to Firebase
+  deploy:
+    name: 'Deploy to Firebase'
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Setup Firebase CLI
+        uses: w9jds/firebase-action@master
+        with:
+          args: --version
+
+      - name: Deploy to Firebase Hosting
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only hosting --project ${{ env.FIREBASE_PROJECT_ID }}
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+
+      - name: Deploy Firestore Rules
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only firestore:rules --project ${{ env.FIREBASE_PROJECT_ID }}
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+
+      - name: Deploy Firestore Indexes
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only firestore:indexes --project ${{ env.FIREBASE_PROJECT_ID }}
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+
+  # Create Release Notes
+  release:
+    name: 'Create Release'
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get Previous Tag
+        id: get_previous_tag
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "previous_tag=${PREVIOUS_TAG}" >> $GITHUB_OUTPUT
+          echo "Previous tag: ${PREVIOUS_TAG}"
+
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          CURRENT_DATE=$(date +'%Y-%m-%d')
+          CURRENT_TIME=$(date +'%H:%M:%S UTC')
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')
+          COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')
+          
+          # Get commit history since last tag
+          if [ -n "${{ steps.get_previous_tag.outputs.previous_tag }}" ]; then
+            COMMIT_HISTORY=$(git log ${{ steps.get_previous_tag.outputs.previous_tag }}..HEAD --pretty=format:"- %s (%an)" --no-merges)
+          else
+            COMMIT_HISTORY=$(git log --pretty=format:"- %s (%an)" --no-merges -10)
+          fi
+          
+          # Create release notes
+          RELEASE_NOTES=$(cat << EOF
+          ## 🚀 Deployment Release - ${CURRENT_DATE}
+          
+          **Deployed at:** ${CURRENT_TIME}  
+          **Commit:** ${COMMIT_SHA}  
+          **Author:** ${COMMIT_AUTHOR}  
+          **Firebase Project:** ${FIREBASE_PROJECT_ID}
+          
+          ### 📝 Latest Changes
+          ${COMMIT_HISTORY}
+          
+          ### 🔗 Deployment Links
+          - **Hosting URL:** https://${FIREBASE_PROJECT_ID}.web.app
+          - **Console:** https://console.firebase.google.com/project/${FIREBASE_PROJECT_ID}
+          
+          ### 📋 Deployment Details
+          - ✅ Application Build
+          - ✅ Firebase Hosting
+          - ✅ Firestore Rules
+          - ✅ Firestore Indexes
+          
+          ---
+          *Automated deployment from commit ${COMMIT_SHA}*
+          EOF
+          )
+          
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+          echo "${RELEASE_NOTES}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create/Update Release Notes File
+        run: |
+          mkdir -p docs/releases
+          echo "${{ steps.release_notes.outputs.RELEASE_NOTES }}" > docs/releases/latest.md
+          
+          # Also create a timestamped release file
+          TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
+          echo "${{ steps.release_notes.outputs.RELEASE_NOTES }}" > docs/releases/release_${TIMESTAMP}.md
+
+      - name: Commit Release Notes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/releases/
+          git commit -m "📝 Add release notes for deployment $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
+          git push
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: release-${{ github.run_number }}
+          release_name: 🚀 Production Deployment - ${{ github.run_number }}
+          body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+          draft: false
+          prerelease: false
+
+  # Notification Job
+  notify:
+    name: 'Send Notifications'
+    runs-on: ubuntu-latest
+    needs: [deploy, release]
+    if: always() && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true))
+    
+    steps:
+      - name: Deployment Success Notification
+        if: needs.deploy.result == 'success'
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "🌐 Application is live at: https://${FIREBASE_PROJECT_ID}.web.app"
+          
+      - name: Deployment Failure Notification
+        if: needs.deploy.result == 'failure'
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Please check the workflow logs for details."

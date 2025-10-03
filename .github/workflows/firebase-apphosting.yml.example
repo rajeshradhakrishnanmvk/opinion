@@ -1,0 +1,169 @@
+name: Firebase App Hosting CI/CD
+
+# This workflow is for Firebase App Hosting (full-stack Next.js apps)
+# Use this instead of firebase-deploy.yml if you want server-side rendering
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    types: [ closed ]
+
+env:
+  NODE_VERSION: '20'
+  FIREBASE_PROJECT_ID: 'nammal-e6351'
+
+jobs:
+  # Lint and Test Job
+  test:
+    name: 'Lint & Test'
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run TypeScript Check
+        run: npm run typecheck
+
+      - name: Run Linter
+        run: npm run lint
+
+      - name: Test Build
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+  # Deploy to Firebase App Hosting
+  deploy:
+    name: 'Deploy to Firebase App Hosting'
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Setup Firebase CLI
+        uses: w9jds/firebase-action@master
+        with:
+          args: --version
+
+      - name: Deploy to Firebase App Hosting
+        uses: w9jds/firebase-action@master
+        with:
+          args: apphosting:backends:create --project ${{ env.FIREBASE_PROJECT_ID }} --location us-central1 --github-repo ${{ github.repository }}
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+
+      - name: Deploy Firestore Rules & Indexes
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only firestore --project ${{ env.FIREBASE_PROJECT_ID }}
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+
+  # Create Release Notes
+  release:
+    name: 'Create Release'
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          CURRENT_DATE=$(date +'%Y-%m-%d')
+          CURRENT_TIME=$(date +'%H:%M:%S UTC')
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')
+          
+          # Get recent commits
+          COMMIT_HISTORY=$(git log --pretty=format:"- %s (%an)" --no-merges -5)
+          
+          # Create release notes
+          RELEASE_NOTES=$(cat << EOF
+          ## 🚀 App Hosting Deployment - ${CURRENT_DATE}
+          
+          **Deployed at:** ${CURRENT_TIME}  
+          **Commit:** ${COMMIT_SHA}  
+          **Author:** ${COMMIT_AUTHOR}  
+          **Firebase Project:** ${FIREBASE_PROJECT_ID}
+          
+          ### 📝 Recent Changes
+          ${COMMIT_HISTORY}
+          
+          ### 🔗 Deployment Links
+          - **App Hosting URL:** https://${FIREBASE_PROJECT_ID}--main-<hash>.app.web.app
+          - **Console:** https://console.firebase.google.com/project/${FIREBASE_PROJECT_ID}/apphosting
+          
+          ### 📋 Deployment Details
+          - ✅ Next.js Full-Stack App
+          - ✅ Firebase App Hosting
+          - ✅ Firestore Rules & Indexes
+          - ✅ Server-Side Rendering Enabled
+          
+          ---
+          *Automated App Hosting deployment from commit ${COMMIT_SHA}*
+          EOF
+          )
+          
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+          echo "${RELEASE_NOTES}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release Notes File
+        run: |
+          mkdir -p docs/releases
+          echo "${{ steps.release_notes.outputs.RELEASE_NOTES }}" > docs/releases/latest-apphosting.md
+          
+          TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
+          echo "${{ steps.release_notes.outputs.RELEASE_NOTES }}" > docs/releases/apphosting_${TIMESTAMP}.md
+
+      - name: Commit Release Notes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/releases/
+          git commit -m "📝 Add App Hosting release notes $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
+          git push
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: apphosting-${{ github.run_number }}
+          release_name: 🚀 App Hosting Deployment - ${{ github.run_number }}
+          body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+          draft: false
+          prerelease: false
