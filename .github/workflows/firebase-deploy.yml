@@ -63,23 +63,17 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-
-      - name: Build Application (SSR)
+      - name: Build Application
         run: npm run build
         env:
           NODE_ENV: production
 
-      - name: Setup Firebase CLI
+      - name: Deploy to Firebase Hosting
         uses: w9jds/firebase-action@master
         with:
-          args: --version
-
-      - name: Deploy to Firebase App Hosting (SSR)
-        run: |
-          npx firebase apphosting:deploy --project ${{ env.FIREBASE_PROJECT_ID }} --ci
+          args: deploy --only hosting --project ${{ env.FIREBASE_PROJECT_ID }}
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
 
       - name: Deploy Firestore Rules
         uses: w9jds/firebase-action@master
@@ -87,7 +81,6 @@ jobs:
           args: deploy --only firestore:rules --project ${{ env.FIREBASE_PROJECT_ID }}
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
 
       - name: Deploy Firestore Indexes
         uses: w9jds/firebase-action@master
@@ -95,7 +88,6 @@ jobs:
           args: deploy --only firestore:indexes --project ${{ env.FIREBASE_PROJECT_ID }}
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
 
   # Create Release Notes
   release:
@@ -194,9 +186,7 @@ jobs:
 
   # Notification Job
   notify:
-    name: 'Send Notifications'    git add package-lock.json
-    git commit -m "Update package-lock.json after adding ESLint dependencies"
-    git push
+    name: 'Send Notifications'
     runs-on: ubuntu-latest
     needs: [deploy, release]
     if: always() && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true))
