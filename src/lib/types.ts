@@ -7,6 +7,9 @@ export type Concern = {
   upvotes: number;
   upvotedBy: string[]; // Array of apartmentNumbers that have upvoted
   createdAt: string; // ISO 8601 date string
+  deletedAt?: string; // ISO 8601 date string for soft delete
+  deletedBy?: string; // User ID who deleted the concern
+  isDeleted?: boolean; // Soft delete flag
 };
 
 export type User = {

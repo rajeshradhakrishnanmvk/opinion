@@ -1,10 +1,11 @@
 "use client";
 
-import { MessageSquareText } from "lucide-react";
+import { MessageSquareText, Files } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { canViewFiles } from "@/lib/fileUtils";
 
 export function Header() {
   const { firebaseUser, profile, logout, isAdmin } = useAuth();
@@ -18,12 +19,31 @@ export function Header() {
     }
   };
 
+  const canAccessFiles = canViewFiles(profile?.role);
+
   return (
     <header className="flex h-16 items-center border-b bg-card px-4 md:px-6">
-      <div className="flex items-center gap-2 font-semibold">
-        <MessageSquareText className="h-6 w-6 text-primary" />
-        <Link href="/" className="text-lg font-headline">Opinion</Link>
+      <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 font-semibold">
+          <MessageSquareText className="h-6 w-6 text-primary" />
+          <Link href="/" className="text-lg font-headline">Opinion</Link>
+        </div>
+        
+        {firebaseUser && (
+          <nav className="flex items-center gap-4">
+            <Link href="/" className="text-sm hover:text-primary transition-colors">
+              Community
+            </Link>
+            {canAccessFiles && (
+              <Link href="/files" className="text-sm hover:text-primary transition-colors flex items-center gap-1">
+                <Files className="h-4 w-4" />
+                Files
+              </Link>
+            )}
+          </nav>
+        )}
       </div>
+      
       <div className="ml-auto flex items-center gap-3">
         {!firebaseUser && (
           <Link href="/signin">

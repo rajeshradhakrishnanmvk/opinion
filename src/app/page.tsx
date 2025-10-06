@@ -15,18 +15,24 @@ import { useConcernsFirestore as useConcerns } from "@/hooks/useConcernsFirestor
 import { Skeleton } from "@/components/ui/skeleton";
 
 function OpinionApp() {
-  const { concerns, loading, createConcern, upvoteConcern } = useConcerns();
+  const { concerns, loading, createConcern, upvoteConcern, softDeleteConcern, restoreConcern } = useConcerns();
   const { user, setIdentityDialogOpen, setPendingAction } = useUser();
   const { firebaseUser, profile } = useAuth();
   const [isNewConcernDialogOpen, setNewConcernDialogOpen] = useState(false);
 
   const handleCreateNewConcern = () => {
-    // Require Firebase auth + verified profile
+    // Only allow owners and admins to submit concerns
     if (!firebaseUser || !profile || !profile.verified) {
       setPendingAction(() => () => setNewConcernDialogOpen(true));
       setIdentityDialogOpen(true);
       return;
     }
+
+    // Check role permissions - only owners and admins can submit
+    if (profile.role !== 'owner' && profile.role !== 'admin') {
+      return; // Silently ignore for tenants
+    }
+
     setNewConcernDialogOpen(true);
   };
 
@@ -41,7 +47,18 @@ function OpinionApp() {
     setNewConcernDialogOpen(false);
   };
 
+  const handleDeleteConcern = (concernId: string) => {
+    if (!firebaseUser || profile?.role !== 'admin') return;
+    softDeleteConcern(concernId, firebaseUser.uid);
+  };
+
+  const handleRestoreConcern = (concernId: string) => {
+    if (!firebaseUser || profile?.role !== 'admin') return;
+    restoreConcern(concernId);
+  };
+
   const sortedConcerns = [...concerns].sort((a, b) => b.upvotes - a.upvotes);
+  const canSubmitConcerns = profile?.role === 'owner' || profile?.role === 'admin';
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -51,12 +68,19 @@ function OpinionApp() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold font-headline">Community Board</h1>
-              <p className="text-muted-foreground">Browse and upvote resident concerns.</p>
+              <p className="text-muted-foreground">
+                {profile?.role === 'tenant' 
+                  ? "Browse and upvote resident concerns." 
+                  : "Browse, upvote, and submit resident concerns."
+                }
+              </p>
             </div>
-            <Button onClick={handleCreateNewConcern}>
-              <Plus className="mr-2 h-4 w-4" />
-              Submit a Concern
-            </Button>
+            {canSubmitConcerns && (
+              <Button onClick={handleCreateNewConcern}>
+                <Plus className="mr-2 h-4 w-4" />
+                Submit a Concern
+              </Button>
+            )}
           </div>
 
           <div className="grid gap-6">
@@ -72,6 +96,8 @@ function OpinionApp() {
                   key={concern.id}
                   concern={concern}
                   onUpvote={() => handleUpvote(concern.id)}
+                  onDelete={handleDeleteConcern}
+                  onRestore={handleRestoreConcern}
                 />
               ))
             )}

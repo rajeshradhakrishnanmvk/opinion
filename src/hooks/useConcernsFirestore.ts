@@ -2,7 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { firestore } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  doc, 
+  updateDoc, 
+  serverTimestamp, 
+  getDocs, 
+  query, 
+  where, 
+  orderBy 
+} from 'firebase/firestore';
 import type { Concern, User } from '@/lib/types';
 import { initialConcerns } from '@/lib/data';
 import { toast } from 'sonner';
@@ -22,9 +33,42 @@ export function useConcernsFirestore() {
         await addDoc(collection(firestore, CONCERNS_COLLECTION), {
           ...concern,
           createdAt: concern.createdAt, // already ISO string
+          isDeleted: false, // Add soft delete flag
           // store upvotedBy as array directly
         });
       }
+    }
+  }, []);
+
+  const loadConcerns = useCallback(async (includeDeleted = false) => {
+    try {
+      setLoading(true);
+      const concernsRef = collection(firestore, CONCERNS_COLLECTION);
+      
+      let q;
+      if (includeDeleted) {
+        // Load all concerns (for admin view)
+        q = query(concernsRef, orderBy("createdAt", "desc"));
+      } else {
+        // Only load non-deleted concerns
+        q = query(
+          concernsRef, 
+          where("isDeleted", "!=", true),
+          orderBy("createdAt", "desc")
+        );
+      }
+      
+      const snapshot = await getDocs(q);
+      const list: Concern[] = snapshot.docs.map(d => ({
+        id: d.id,
+        ...(d.data() as Omit<Concern, 'id'>)
+      }));
+      
+      setConcerns(list);
+      setLoading(false);
+    } catch (e) {
+      console.error('Firestore concerns load failed', e);
+      setLoading(false);
     }
   }, []);
 
@@ -33,7 +77,14 @@ export function useConcernsFirestore() {
     (async () => {
       try {
         await seedIfEmpty();
-        unsub = onSnapshot(collection(firestore, CONCERNS_COLLECTION), (snap) => {
+        // Use real-time listener for regular concerns view
+        const q = query(
+          collection(firestore, CONCERNS_COLLECTION),
+          where("isDeleted", "!=", true),
+          orderBy("createdAt", "desc")
+        );
+        
+        unsub = onSnapshot(q, (snap) => {
           const list: Concern[] = snap.docs.map(d => ({
             id: d.id,
             ...(d.data() as Omit<Concern, 'id'>)
@@ -62,6 +113,7 @@ export function useConcernsFirestore() {
         upvotes: 1,
         upvotedBy: [user.apartmentNumber],
         createdAt: new Date().toISOString(),
+        isDeleted: false,
       };
       await addDoc(collection(firestore, CONCERNS_COLLECTION), newConcern);
       toast.success('Concern submitted successfully!');
@@ -87,5 +139,43 @@ export function useConcernsFirestore() {
     }
   };
 
-  return { concerns, loading, createConcern, upvoteConcern };
+  const softDeleteConcern = async (concernId: string, deletedBy: string) => {
+    try {
+      const ref = doc(firestore, CONCERNS_COLLECTION, concernId);
+      await updateDoc(ref, {
+        isDeleted: true,
+        deletedAt: new Date().toISOString(),
+        deletedBy: deletedBy,
+      });
+      toast.success('Concern deleted successfully');
+    } catch (e) {
+      console.error('Firestore soft delete failed', e);
+      toast.error('Failed to delete concern');
+    }
+  };
+
+  const restoreConcern = async (concernId: string) => {
+    try {
+      const ref = doc(firestore, CONCERNS_COLLECTION, concernId);
+      await updateDoc(ref, {
+        isDeleted: false,
+        deletedAt: null,
+        deletedBy: null,
+      });
+      toast.success('Concern restored successfully');
+    } catch (e) {
+      console.error('Firestore restore failed', e);
+      toast.error('Failed to restore concern');
+    }
+  };
+
+  return { 
+    concerns, 
+    loading, 
+    createConcern, 
+    upvoteConcern, 
+    softDeleteConcern, 
+    restoreConcern, 
+    loadConcerns 
+  };
 }
