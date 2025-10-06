@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { AdminUserManagement } from "@/components/AdminUserManagement";
 import { AdminDashboard } from "@/components/AdminDashboard";
+import { UserManagement } from "@/components/UserManagement";
 import { useRouter } from "next/navigation";
 
 const schema = z.object({
@@ -161,7 +162,7 @@ export default function ProfilePage() {
         <>
           <Separator />
           <AdminDashboard />
-          <AdminUserManagement />
+          <UserManagement />
         </>
       )}
     </div>

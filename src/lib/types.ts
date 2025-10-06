@@ -20,6 +20,7 @@ export type User = {
 export type UserRole = 'admin' | 'owner' | 'tenant';
 
 export type Profile = {
+  uid?: string;
   fullName: string;
   tower: string;
   apartmentNumber: string;
@@ -28,4 +29,6 @@ export type Profile = {
   role?: UserRole;
   assignedBy?: string;
   assignedAt?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 };

@@ -45,26 +45,21 @@ export function useConcernsFirestore() {
       setLoading(true);
       const concernsRef = collection(firestore, CONCERNS_COLLECTION);
       
-      let q;
-      if (includeDeleted) {
-        // Load all concerns (for admin view)
-        q = query(concernsRef, orderBy("createdAt", "desc"));
-      } else {
-        // Only load non-deleted concerns
-        q = query(
-          concernsRef, 
-          where("isDeleted", "!=", true),
-          orderBy("createdAt", "desc")
-        );
-      }
+      // Use simple query without complex filtering
+      const q = query(concernsRef, orderBy("createdAt", "desc"));
       
       const snapshot = await getDocs(q);
-      const list: Concern[] = snapshot.docs.map(d => ({
+      const allConcerns: Concern[] = snapshot.docs.map(d => ({
         id: d.id,
         ...(d.data() as Omit<Concern, 'id'>)
       }));
       
-      setConcerns(list);
+      // Filter client-side based on includeDeleted parameter
+      const filteredConcerns = includeDeleted 
+        ? allConcerns 
+        : allConcerns.filter(concern => !concern.isDeleted);
+      
+      setConcerns(filteredConcerns);
       setLoading(false);
     } catch (e) {
       console.error('Firestore concerns load failed', e);
@@ -77,18 +72,18 @@ export function useConcernsFirestore() {
     (async () => {
       try {
         await seedIfEmpty();
-        // Use real-time listener for regular concerns view
-        const q = query(
-          collection(firestore, CONCERNS_COLLECTION),
-          where("isDeleted", "!=", true),
-          orderBy("createdAt", "desc")
-        );
+        // Use simpler listener without complex query to avoid index issues
+        const concernsRef = collection(firestore, CONCERNS_COLLECTION);
         
-        unsub = onSnapshot(q, (snap) => {
-          const list: Concern[] = snap.docs.map(d => ({
-            id: d.id,
-            ...(d.data() as Omit<Concern, 'id'>)
-          }));
+        unsub = onSnapshot(concernsRef, (snap) => {
+          const list: Concern[] = snap.docs
+            .map(d => ({
+              id: d.id,
+              ...(d.data() as Omit<Concern, 'id'>)
+            }))
+            .filter(concern => !concern.isDeleted) // Filter client-side to avoid index requirement
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort client-side
+          
           setConcerns(list);
           setLoading(false);
         }, (err) => {

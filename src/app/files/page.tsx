@@ -8,6 +8,8 @@ import { FileItem } from '@/lib/fileUtils';
 import { FileUpload } from '@/components/FileUpload';
 import { FileList } from '@/components/FileList';
 import { PDFViewer } from '@/components/PDFViewer';
+import { TokenRefreshButton } from '@/components/TokenRefreshButton';
+import { AuthDebugPanel } from '@/components/AuthDebugPanel';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -70,11 +72,14 @@ export default function FilesPage() {
 
   return (
     <div className="container mx-auto p-6 h-screen flex flex-col">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Document Management</h1>
-        <p className="text-muted-foreground">
-          Upload and manage PDF documents for the community
-        </p>
+      <div className="mb-6 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold">Document Management</h1>
+          <p className="text-muted-foreground">
+            Upload and manage PDF documents for the community
+          </p>
+        </div>
+        <TokenRefreshButton />
       </div>
 
       <div className="flex-1 flex gap-6 min-h-0">
@@ -101,6 +106,9 @@ export default function FilesPage() {
               />
             </TabsContent>
           </Tabs>
+          
+          {/* Debug Panel */}
+          <AuthDebugPanel />
         </div>
 
         {/* Right Panel - PDF Viewer */}

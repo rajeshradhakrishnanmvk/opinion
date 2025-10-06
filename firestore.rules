@@ -3,11 +3,29 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Profiles collection holds per-user verification data
     match /profiles/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && 
+        (request.auth.uid == userId || hasAdminRole());
+      allow write: if request.auth != null && 
+        (request.auth.uid == userId || hasAdminRole());
     }
+    
+    // Helper functions
+    function hasAdminRole() {
+      return request.auth != null && 
+        request.auth.token.role == 'admin';
+    }
+    
+    function hasOwnerRole() {
+      return request.auth != null && 
+        request.auth.token.role == 'owner';
+    }
+    
+    function canSubmitConcerns() {
+      return hasAdminRole() || hasOwnerRole();
+    }
+    
     match /concerns/{concernId} {
-      // Allow public read access to concerns
+      // Allow public read access to concerns (including soft-deleted for admins)
       allow read: if true;
       
       function isVerifiedUser() {
@@ -15,33 +33,50 @@ service cloud.firestore {
           exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) &&
           get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.verified == true;
       }
+      
       function userProfile() {
         return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
       }
 
-      // Allow creating new concerns by verified users only
-      allow create: if isVerifiedUser() &&
-        request.resource.data.keys().hasAll(['title','description','authorName','apartmentNumber','upvotes','upvotedBy','createdAt']) &&
+      // Allow creating new concerns by verified users with owner/admin role
+      allow create: if isVerifiedUser() && canSubmitConcerns() &&
+        request.resource.data.keys().hasAll(['title','description','authorName','apartmentNumber','upvotes','upvotedBy','createdAt','isDeleted']) &&
         // Author and apartment must match verified profile
         request.resource.data.authorName == userProfile().fullName &&
         request.resource.data.apartmentNumber == userProfile().apartmentNumber &&
         request.resource.data.upvotes == 1 &&
         request.resource.data.upvotedBy.size() == 1 &&
-        request.resource.data.upvotedBy[0] == request.resource.data.apartmentNumber;
+        request.resource.data.upvotedBy[0] == request.resource.data.apartmentNumber &&
+        request.resource.data.isDeleted == false;
       
-      // Allow updating concerns for upvoting (incrementing upvotes and adding to upvotedBy) by verified users only
+      // Allow updating concerns for upvoting by verified users
       allow update: if isVerifiedUser() &&
-        request.resource.data.keys().hasAll(['title','description','authorName','apartmentNumber','upvotes','upvotedBy','createdAt'])
+        // Upvoting logic
+        (request.resource.data.keys().hasAll(['title','description','authorName','apartmentNumber','upvotes','upvotedBy','createdAt','isDeleted'])
         && request.resource.data.title == resource.data.title
         && request.resource.data.description == resource.data.description
         && request.resource.data.authorName == resource.data.authorName
         && request.resource.data.apartmentNumber == resource.data.apartmentNumber
         && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.isDeleted == resource.data.isDeleted
         // exactly one new upvote and it must be from this user's apartment number
         && request.resource.data.upvotedBy.size() == resource.data.upvotedBy.size() + 1
         && request.resource.data.upvotes == request.resource.data.upvotedBy.size()
         && !(userProfile().apartmentNumber in resource.data.upvotedBy)
-        && (userProfile().apartmentNumber in request.resource.data.upvotedBy);
+        && (userProfile().apartmentNumber in request.resource.data.upvotedBy))
+        ||
+        // Admin soft delete/restore logic
+        (hasAdminRole() &&
+        request.resource.data.keys().hasAll(['title','description','authorName','apartmentNumber','upvotes','upvotedBy','createdAt','isDeleted']) &&
+        request.resource.data.title == resource.data.title &&
+        request.resource.data.description == resource.data.description &&
+        request.resource.data.authorName == resource.data.authorName &&
+        request.resource.data.apartmentNumber == resource.data.apartmentNumber &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.upvotes == resource.data.upvotes &&
+        request.resource.data.upvotedBy == resource.data.upvotedBy &&
+        // Only allow changing isDeleted, deletedAt, deletedBy fields
+        request.resource.data.isDeleted != resource.data.isDeleted);
       
       // Disallow deletes for data integrity
       allow delete: if false;

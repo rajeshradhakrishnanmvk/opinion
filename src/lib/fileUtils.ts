@@ -1,4 +1,4 @@
-import { storage } from './firebase';
+import { storage, auth } from './firebase';
 import { ref, uploadBytes, getDownloadURL, listAll, deleteObject, getMetadata } from 'firebase/storage';
 
 export interface FileItem {
@@ -14,11 +14,26 @@ export interface FileItem {
 
 export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
 
+// Helper function to refresh authentication token
+async function refreshAuthToken(): Promise<void> {
+  if (auth.currentUser) {
+    try {
+      await auth.currentUser.getIdToken(true); // Force refresh
+      console.log('Auth token refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing auth token:', error);
+    }
+  }
+}
+
 export async function uploadPDFFile(
   file: File, 
   uploadedBy: string, 
   uploadedByName: string
 ): Promise<FileItem> {
+  // Refresh auth token to ensure we have latest custom claims
+  await refreshAuthToken();
+
   // Validate file type
   if (file.type !== 'application/pdf') {
     throw new Error('Only PDF files are allowed');
@@ -34,8 +49,17 @@ export async function uploadPDFFile(
   const storageRef = ref(storage, `documents/${fileName}`);
 
   try {
-    // Upload file
-    const snapshot = await uploadBytes(storageRef, file);
+    // Upload file with metadata
+    const metadata = {
+      customMetadata: {
+        uploadedBy,
+        uploadedByName,
+        uploadedAt: new Date().toISOString()
+      },
+      contentType: 'application/pdf'
+    };
+
+    const snapshot = await uploadBytes(storageRef, file, metadata);
     const downloadURL = await getDownloadURL(snapshot.ref);
 
     return {
@@ -50,11 +74,22 @@ export async function uploadPDFFile(
     };
   } catch (error) {
     console.error('Error uploading file:', error);
-    throw new Error('Failed to upload file');
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('unauthorized') || error.message.includes('permission')) {
+        throw new Error('Permission denied. Please ensure you have admin or owner role and try refreshing the page.');
+      }
+    }
+    
+    throw new Error('Failed to upload file. Please check your permissions.');
   }
 }
 
 export async function getAllFiles(): Promise<FileItem[]> {
+  // Refresh auth token to ensure we have latest custom claims
+  await refreshAuthToken();
+
   try {
     const storageRef = ref(storage, 'documents/');
     const result = await listAll(storageRef);
@@ -90,6 +125,14 @@ export async function getAllFiles(): Promise<FileItem[]> {
     return files.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime());
   } catch (error) {
     console.error('Error fetching files:', error);
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('unauthorized') || error.message.includes('permission')) {
+        throw new Error('Permission denied. Please ensure you have admin or owner role and try refreshing the page.');
+      }
+    }
+    
     throw new Error('Failed to fetch files');
   }
 }

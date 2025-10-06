@@ -41,7 +41,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (snap.exists()) {
       setProfile(snap.data() as Profile);
     } else {
-      setProfile(null);
+      // Create default tenant profile for new users
+      const defaultProfile: Profile = {
+        uid,
+        fullName: '',
+        tower: '',
+        apartmentNumber: '',
+        phone: firebaseUser?.phoneNumber || '',
+        verified: false,
+        role: 'tenant', // Default to tenant role
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      try {
+        await setDoc(ref, defaultProfile);
+        setProfile(defaultProfile);
+      } catch (error) {
+        console.error('Error creating default profile:', error);
+        setProfile(null);
+      }
     }
   };
 
