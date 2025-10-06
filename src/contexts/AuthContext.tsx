@@ -4,14 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { auth, firestore } from "@/lib/firebase";
 import { onAuthStateChanged, signOut, User as FUser } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-
-export type Profile = {
-  fullName: string;
-  tower: string;
-  apartmentNumber: string; // alphanumeric
-  phone: string;
-  verified: boolean;
-};
+import { Profile } from "@/lib/types";
 
 type AuthContextValue = {
   firebaseUser: FUser | null;
@@ -19,6 +12,7 @@ type AuthContextValue = {
   profile: Profile | null;
   refreshProfile: () => Promise<void>;
   logout: () => Promise<void>;
+  isAdmin: boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -59,9 +53,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signOut(auth);
   };
 
+  const isAdmin = profile?.role === 'admin';
+
   const value = useMemo(
-    () => ({ firebaseUser, loading, profile, refreshProfile, logout }),
-    [firebaseUser, loading, profile]
+    () => ({ firebaseUser, loading, profile, refreshProfile, logout, isAdmin }),
+    [firebaseUser, loading, profile, isAdmin]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -13,3 +13,16 @@ export type User = {
   name: string;
   apartmentNumber: string;
 };
+
+export type UserRole = 'admin' | 'owner' | 'tenant';
+
+export type Profile = {
+  fullName: string;
+  tower: string;
+  apartmentNumber: string;
+  phone: string;
+  verified: boolean;
+  role?: UserRole;
+  assignedBy?: string;
+  assignedAt?: Date;
+};

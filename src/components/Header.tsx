@@ -4,9 +4,20 @@ import { MessageSquareText } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export function Header() {
-  const { firebaseUser, profile, logout } = useAuth();
+  const { firebaseUser, profile, logout, isAdmin } = useAuth();
+  
+  const getRoleBadgeVariant = (role?: string) => {
+    switch (role) {
+      case 'admin': return 'destructive';
+      case 'owner': return 'default';
+      case 'tenant': return 'secondary';
+      default: return 'outline';
+    }
+  };
+
   return (
     <header className="flex h-16 items-center border-b bg-card px-4 md:px-6">
       <div className="flex items-center gap-2 font-semibold">
@@ -21,9 +32,19 @@ export function Header() {
         )}
         {firebaseUser && (
           <>
+            <div className="flex items-center gap-2">
+              {profile?.role && (
+                <Badge variant={getRoleBadgeVariant(profile.role)} className="text-xs">
+                  {profile.role}
+                </Badge>
+              )}
+              {profile?.verified && !profile?.role && (
+                <Badge variant="outline" className="text-xs">Verified</Badge>
+              )}
+            </div>
             <Link href="/profile">
               <Button variant="ghost" size="sm">
-                {profile?.verified ? "Profile" : "Verify Profile"}
+                {isAdmin ? "Admin Panel" : profile?.verified ? "Profile" : "Verify Profile"}
               </Button>
             </Link>
             <Button size="sm" onClick={() => logout()}>Logout</Button>
