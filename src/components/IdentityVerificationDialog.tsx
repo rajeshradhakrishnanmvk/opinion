@@ -39,15 +39,27 @@ export function IdentityVerificationDialog() {
   const [residence, setResidence] = useState("");
 
   const displayName = useMemo(() => firebaseUser?.displayName || "", [firebaseUser]);
-  const phoneNumber = useMemo(() => firebaseUser?.phoneNumber || "", [firebaseUser]);
+  const phoneNumber = useMemo(() => {
+    const phone = firebaseUser?.phoneNumber || "";
+    if (phone.length > 4) {
+      // Mask phone number, show last 4 digits
+      return phone.slice(0, -4).replace(/\d/g, '*') + phone.slice(-4);
+    }
+    return phone;
+  }, [firebaseUser]);
 
   useEffect(() => {
     if (profile?.verified) {
-      // Already verified: close dialog if open
-      setIdentityDialogOpen(false);
-      setPendingAction(null);
+      // Already verified: close dialog if open and execute pending action
+      if (isIdentityDialogOpen) {
+        setIdentityDialogOpen(false);
+        if (pendingAction) {
+          pendingAction();
+          setPendingAction(null);
+        }
+      }
     }
-  }, [profile?.verified, setIdentityDialogOpen, setPendingAction]);
+  }, [profile?.verified, isIdentityDialogOpen, setIdentityDialogOpen, pendingAction, setPendingAction]);
 
   const quickVerify = async () => {
     if (!firebaseUser) {
@@ -68,14 +80,16 @@ export function IdentityVerificationDialog() {
         fullName: displayName || (firebaseUser.email?.split("@")[0] ?? "Resident"),
         tower,
         apartmentNumber: parsed.apartmentNumber,
-        phone: phoneNumber,
+        phone: firebaseUser.phoneNumber || phoneNumber,
         verified: true,
       }, { merge: true });
       await refreshProfile();
       toast({ title: "Verified", description: "You're all set!" });
       setIdentityDialogOpen(false);
-      if (pendingAction) pendingAction();
-      setPendingAction(null);
+      if (pendingAction) {
+        pendingAction();
+        setPendingAction(null);
+      }
     } catch (e) {
       console.error(e);
       toast({ variant: "destructive", title: "Verification failed", description: "Please try again or open your Profile." });
