@@ -1,0 +1,30 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Documents folder - only admin and owners can read/upload
+    match /documents/{allPaths=**} {
+      // Allow read access for authenticated users with admin or owner role
+      allow read: if request.auth != null && 
+                     request.auth.token != null &&
+                     (request.auth.token.role == 'admin' || request.auth.token.role == 'owner');
+      
+      // Allow write access for authenticated users with admin or owner role and file size limit
+      allow write: if request.auth != null && 
+                      request.auth.token != null &&
+                      (request.auth.token.role == 'admin' || request.auth.token.role == 'owner') &&
+                      request.resource != null &&
+                      request.resource.size < 5 * 1024 * 1024 && // 5MB limit
+                      request.resource.contentType == 'application/pdf'; // PDF only
+      
+      // Allow delete only for admin
+      allow delete: if request.auth != null && 
+                       request.auth.token != null &&
+                       request.auth.token.role == 'admin';
+    }
+    
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

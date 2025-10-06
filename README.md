@@ -1,3 +1,25 @@
+# Opinion
+
+This app lets residents submit and upvote community concerns. This repository has been updated to support:
+
+- Firebase Authentication using FirebaseUI (phone, Google, email)
+- A Profile page where users verify their details (Full Name, Tower, Apartment Number, Phone)
+- Firestore rules that restrict creating/upvoting concerns to verified users
+
+## Auth & Profile Flow
+
+1. User signs in at `/signin` using FirebaseUI.
+2. After sign-in, user is redirected to `/profile` to complete verification.
+3. Saving the profile writes to `profiles/{uid}` with `verified: true`.
+4. Only verified users can submit or upvote concerns.
+
+## Firestore
+
+- `profiles/{uid}`: stores user profile and `verified` flag.
+- `concerns/{id}`: stores concerns. Publicly readable; writes gated by rules.
+
+See `firestore.rules` for full authorization logic.
+
 # Opinion - Community Concerns Board
 
 A Next.js application for managing community concerns with Firebase Realtime Database integration.
