@@ -4,6 +4,7 @@ import * as React from "react";
 import { useState } from "react";
 import type { Concern } from "@/lib/types";
 import { UserProvider, useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Header } from "@/components/Header";
@@ -16,25 +17,27 @@ import { Skeleton } from "@/components/ui/skeleton";
 function OpinionApp() {
   const { concerns, loading, createConcern, upvoteConcern } = useConcerns();
   const { user, setIdentityDialogOpen, setPendingAction } = useUser();
+  const { firebaseUser, profile } = useAuth();
   const [isNewConcernDialogOpen, setNewConcernDialogOpen] = useState(false);
 
   const handleCreateNewConcern = () => {
-    if (!user) {
+    // Require Firebase auth + verified profile
+    if (!firebaseUser || !profile || !profile.verified) {
       setPendingAction(() => () => setNewConcernDialogOpen(true));
       setIdentityDialogOpen(true);
-    } else {
-      setNewConcernDialogOpen(true);
+      return;
     }
+    setNewConcernDialogOpen(true);
   };
 
   const handleUpvote = (concernId: string) => {
-    if (!user) return;
-    upvoteConcern(concernId, user);
+    if (!firebaseUser || !profile || !profile.verified) return;
+    upvoteConcern(concernId, { name: profile.fullName, apartmentNumber: profile.apartmentNumber });
   };
 
   const handleCreateConcern = (title: string, description: string) => {
-    if (!user) return;
-    createConcern(title, description, user);
+    if (!firebaseUser || !profile || !profile.verified) return;
+    createConcern(title, description, { name: profile.fullName, apartmentNumber: profile.apartmentNumber });
     setNewConcernDialogOpen(false);
   };
 

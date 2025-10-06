@@ -1,31 +1,55 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Profiles collection holds per-user verification data
+    match /profiles/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
     match /concerns/{concernId} {
       // Allow public read access to concerns
       allow read: if true;
       
-      // Allow creating new concerns with proper structure
-      allow create: if request.resource.data.keys().hasAll(['title','description','authorName','apartmentNumber','upvotes','upvotedBy','createdAt'])
-        && request.resource.data.upvotes == 1
-        && request.resource.data.upvotedBy.size() == 1
-        && request.resource.data.upvotedBy[0] == request.resource.data.apartmentNumber;
+      function isVerifiedUser() {
+        return request.auth != null &&
+          exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.verified == true;
+      }
+      function userProfile() {
+        return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
+      }
+
+      // Allow creating new concerns by verified users only
+      allow create: if isVerifiedUser() &&
+        request.resource.data.keys().hasAll(['title','description','authorName','apartmentNumber','upvotes','upvotedBy','createdAt']) &&
+        // Author and apartment must match verified profile
+        request.resource.data.authorName == userProfile().fullName &&
+        request.resource.data.apartmentNumber == userProfile().apartmentNumber &&
+        request.resource.data.upvotes == 1 &&
+        request.resource.data.upvotedBy.size() == 1 &&
+        request.resource.data.upvotedBy[0] == request.resource.data.apartmentNumber;
       
-      // Allow updating concerns for upvoting (incrementing upvotes and adding to upvotedBy)
-      allow update: if request.resource.data.keys().hasAll(['title','description','authorName','apartmentNumber','upvotes','upvotedBy','createdAt'])
+      // Allow updating concerns for upvoting (incrementing upvotes and adding to upvotedBy) by verified users only
+      allow update: if isVerifiedUser() &&
+        request.resource.data.keys().hasAll(['title','description','authorName','apartmentNumber','upvotes','upvotedBy','createdAt'])
         && request.resource.data.title == resource.data.title
         && request.resource.data.description == resource.data.description
         && request.resource.data.authorName == resource.data.authorName
         && request.resource.data.apartmentNumber == resource.data.apartmentNumber
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.upvotes > resource.data.upvotes
-        && request.resource.data.upvotedBy.size() > resource.data.upvotedBy.size();
+        // exactly one new upvote and it must be from this user's apartment number
+        && request.resource.data.upvotedBy.size() == resource.data.upvotedBy.size() + 1
+        && request.resource.data.upvotes == request.resource.data.upvotedBy.size()
+        && !(userProfile().apartmentNumber in resource.data.upvotedBy)
+        && (userProfile().apartmentNumber in request.resource.data.upvotedBy);
       
       // Disallow deletes for data integrity
       allow delete: if false;
     }
+    // Deny all else by default
     match /{document=**} {
-      allow read, write: if true;
+      allow read: if false;
+      allow write: if false;
     }
   }
 }

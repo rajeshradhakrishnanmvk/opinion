@@ -1,0 +1,74 @@
+"use client";
+
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { auth, firestore } from "@/lib/firebase";
+import { onAuthStateChanged, signOut, User as FUser } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+
+export type Profile = {
+  fullName: string;
+  tower: string;
+  apartmentNumber: string; // alphanumeric
+  phone: string;
+  verified: boolean;
+};
+
+type AuthContextValue = {
+  firebaseUser: FUser | null;
+  loading: boolean;
+  profile: Profile | null;
+  refreshProfile: () => Promise<void>;
+  logout: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [firebaseUser, setFirebaseUser] = useState<FUser | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      setFirebaseUser(user);
+      if (user) {
+        await loadProfile(user.uid);
+      } else {
+        setProfile(null);
+      }
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  const loadProfile = async (uid: string) => {
+    const ref = doc(firestore, "profiles", uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      setProfile(snap.data() as Profile);
+    } else {
+      setProfile(null);
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (firebaseUser) await loadProfile(firebaseUser.uid);
+  };
+
+  const logout = async () => {
+    await signOut(auth);
+  };
+
+  const value = useMemo(
+    () => ({ firebaseUser, loading, profile, refreshProfile, logout }),
+    [firebaseUser, loading, profile]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
+}
