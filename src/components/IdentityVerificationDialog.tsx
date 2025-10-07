@@ -119,7 +119,7 @@ export function IdentityVerificationDialog() {
 
         {!firebaseUser ? (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">We need to know it's you. Sign in to continue.</p>
+            <p className="text-sm text-muted-foreground">We need to know it&apos;s you. Sign in to continue.</p>
             <div className="flex gap-2">
               <Link href="/signin"><Button>Sign in</Button></Link>
               <Link href="/"><Button variant="ghost">Not now</Button></Link>
