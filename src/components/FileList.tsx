@@ -4,7 +4,6 @@ import { FileItem, formatFileSize, canDeleteFiles } from '@/lib/fileUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { File, Trash2, Download } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -144,7 +143,7 @@ export function FileList({
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete File</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to delete "{file.name}"? This action cannot be undone.
+                              Are you sure you want to delete &quot;{file.name}&quot;? This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

@@ -43,11 +43,11 @@ export function useFileManagement() {
       });
       
       return uploadedFile;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error uploading file:', error);
       toast({
         title: "Upload Failed",
-        description: error.message || "Failed to upload file",
+        description: error instanceof Error ? error.message : "Failed to upload file",
         variant: "destructive"
       });
       throw error;
