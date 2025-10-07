@@ -13,6 +13,7 @@ permissions:
 env:
   NODE_VERSION: '20'
   FIREBASE_PROJECT_ID: 'nammal-e6351'
+  NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
 
 jobs:
   # Lint and Test Job
