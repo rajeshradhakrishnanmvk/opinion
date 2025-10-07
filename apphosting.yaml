@@ -9,6 +9,22 @@ runConfig:
   env:
     - variable: NODE_VERSION
       value: "20"
+    - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+      value: "AIzaSyADlCXVhX9-uZIBxGOFDiSaPMFErzGmMCM"
+    - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+      value: "nammal-e6351.firebaseapp.com"
+    - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+      value: "nammal-e6351"
+    - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+      value: "nammal-e6351.firebasestorage.app"
+    - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+      value: "936974821441"
+    - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+      value: "1:936974821441:web:33878f3759d2d658a4fec0"
+    - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+      value: "G-LZENPFZ6GT"
+    - variable: NODE_ENV
+      value: "production"
 
 # Build configuration for Next.js App Router  
 buildConfig:
