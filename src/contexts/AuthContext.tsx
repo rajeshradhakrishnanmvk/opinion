@@ -23,6 +23,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const loadProfile = useCallback(async (uid: string) => {
+    // Only run on client side
+    if (typeof window === 'undefined' || !firestore) return;
+    
     const ref = doc(firestore, "profiles", uid);
     const snap = await getDoc(ref);
     if (snap.exists()) {
@@ -52,6 +55,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [firebaseUser]);
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined' || !auth) {
+      setLoading(false);
+      return;
+    }
+
     const unsub = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
       if (user) {
@@ -69,7 +78,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [firebaseUser, loadProfile]);
 
   const logout = async () => {
-    await signOut(auth);
+    if (typeof window !== 'undefined' && auth) {
+      await signOut(auth);
+    }
   };
 
   const isAdmin = profile?.role === 'admin';
