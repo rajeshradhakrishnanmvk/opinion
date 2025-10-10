@@ -1,10 +1,10 @@
 'use client';
 
 export default function EnvDebug() {
-  // Temporarily enable in production for debugging
-  // if (process.env.NODE_ENV === 'production') {
-  //   return null; // Don't show in production
-  // }
+  // Environment debugging - disabled in production
+  if (process.env.NODE_ENV === 'production') {
+    return null;
+  }
 
   const envVars = {
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
