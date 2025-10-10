@@ -9,20 +9,21 @@ runConfig:
   env:
     - variable: NODE_VERSION
       value: "20"
+    # Firebase configuration from secrets
     - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-      value: "AIzaSyADlCXVhX9-uZIBxGOFDiSaPMFErzGmMCM"
+      secret: FIREBASE_API_KEY
     - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-      value: "nammal-e6351.firebaseapp.com"
+      secret: FIREBASE_AUTH_DOMAIN
     - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-      value: "nammal-e6351"
+      secret: FIREBASE_PROJECT_ID
     - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-      value: "nammal-e6351.firebasestorage.app"
+      secret: FIREBASE_STORAGE_BUCKET
     - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-      value: "936974821441"
+      secret: MESSAGING_SENDER_ID
     - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-      value: "1:936974821441:web:33878f3759d2d658a4fec0"
+      secret: APP_ID
     - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
-      value: "G-LZENPFZ6GT"
+      secret: MEASUREMENT_ID
     - variable: NODE_ENV
       value: "production"
 
