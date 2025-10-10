@@ -2,7 +2,6 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
-import EnvDebug from '@/components/EnvDebug';
 
 export const metadata: Metadata = {
   title: 'Opinion - Community Concerns',
@@ -25,7 +24,6 @@ export default function RootLayout({
         <AuthProvider>
           {children}
         </AuthProvider>
-        <EnvDebug />
         <Toaster />
       </body>
     </html>
