@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllUsers, UserWithId } from '@/lib/adminUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Users, Shield, Home, UserCheck } from 'lucide-react';
 
 export function AdminDashboard() {

@@ -10,7 +10,6 @@ import { FileList } from '@/components/FileList';
 import { PDFViewer } from '@/components/PDFViewer';
 import { TokenRefreshButton } from '@/components/TokenRefreshButton';
 import { AuthDebugPanel } from '@/components/AuthDebugPanel';
-import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRouter } from 'next/navigation';

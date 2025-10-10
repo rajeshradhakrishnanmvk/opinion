@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export function AuthDebugPanel() {
   const { firebaseUser, profile } = useAuth();
-  const [tokenInfo, setTokenInfo] = useState<any>(null);
+  const [tokenInfo, setTokenInfo] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [isLoading, setIsLoading] = useState(false);
 
   const checkToken = async () => {

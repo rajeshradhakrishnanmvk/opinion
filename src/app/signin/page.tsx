@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 
 declare global {
   interface Window {
-    firebase?: any;
-    firebaseui?: any;
+    firebase?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    firebaseui?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   }
 }
 

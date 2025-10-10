@@ -41,7 +41,7 @@ export function ConcernCard({
   onUpvote, 
   onDelete, 
   onRestore, 
-  showDeleted = false 
+  showDeleted: _showDeleted = false // eslint-disable-line @typescript-eslint/no-unused-vars
 }: ConcernCardProps) {
   const { user, setIdentityDialogOpen, setPendingAction } = useUser();
   const { profile } = useAuth();

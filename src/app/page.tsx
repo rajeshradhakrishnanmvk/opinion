@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useState } from "react";
-import type { Concern } from "@/lib/types";
 import { UserProvider, useUser } from "@/contexts/UserContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 function OpinionApp() {
   const { concerns, loading, createConcern, upvoteConcern, softDeleteConcern, restoreConcern } = useConcerns();
-  const { user, setIdentityDialogOpen, setPendingAction } = useUser();
+  const { setIdentityDialogOpen, setPendingAction } = useUser();
   const { firebaseUser, profile } = useAuth();
   const [isNewConcernDialogOpen, setNewConcernDialogOpen] = useState(false);
 

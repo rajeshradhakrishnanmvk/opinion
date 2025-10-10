@@ -13,7 +13,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { AdminUserManagement } from "@/components/AdminUserManagement";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { UserManagement } from "@/components/UserManagement";
 import { useRouter } from "next/navigation";
@@ -57,7 +56,7 @@ export default function ProfilePage() {
         phone: profile.phone,
       });
     }
-  }, [profile]);
+  }, [profile, form]);
 
   const onSubmit = async (values: FormValues) => {
     if (!firebaseUser) return;

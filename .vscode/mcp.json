@@ -7,6 +7,8 @@
       "env": {
         // Ensure these env vars exist in your shell or .env.local if needed by firebase auth
       }
+    },"github": {
+      "url": "https://api.githubcopilot.com/mcp/"
     }
   }
 }

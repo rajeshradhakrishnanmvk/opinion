@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { auth, firestore } from "@/lib/firebase";
 import { onAuthStateChanged, signOut, User as FUser } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -22,20 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      setFirebaseUser(user);
-      if (user) {
-        await loadProfile(user.uid);
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
-    });
-    return () => unsub();
-  }, []);
-
-  const loadProfile = async (uid: string) => {
+  const loadProfile = useCallback(async (uid: string) => {
     const ref = doc(firestore, "profiles", uid);
     const snap = await getDoc(ref);
     if (snap.exists()) {
@@ -62,11 +49,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null);
       }
     }
-  };
+  }, [firebaseUser]);
 
-  const refreshProfile = async () => {
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      setFirebaseUser(user);
+      if (user) {
+        await loadProfile(user.uid);
+      } else {
+        setProfile(null);
+      }
+      setLoading(false);
+    });
+    return () => unsub();
+  }, [loadProfile]);
+
+  const refreshProfile = useCallback(async () => {
     if (firebaseUser) await loadProfile(firebaseUser.uid);
-  };
+  }, [firebaseUser, loadProfile]);
 
   const logout = async () => {
     await signOut(auth);
@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({ firebaseUser, loading, profile, refreshProfile, logout, isAdmin }),
-    [firebaseUser, loading, profile, isAdmin]
+    [firebaseUser, loading, profile, refreshProfile, isAdmin]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

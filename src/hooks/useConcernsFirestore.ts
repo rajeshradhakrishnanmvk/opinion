@@ -8,10 +8,8 @@ import {
   addDoc, 
   doc, 
   updateDoc, 
-  serverTimestamp, 
   getDocs, 
   query, 
-  where, 
   orderBy 
 } from 'firebase/firestore';
 import type { Concern, User } from '@/lib/types';
