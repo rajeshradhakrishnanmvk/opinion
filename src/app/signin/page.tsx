@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { getPublicFirebaseConfig, isPublicConfigValid } from "@/lib/firebaseConfig";
 import { useRouter } from "next/navigation";
 
 declare global {
@@ -11,14 +12,7 @@ declare global {
   }
 }
 
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
-};
+const firebaseConfig = getPublicFirebaseConfig();
 
 export default function SignInPage() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -64,8 +58,27 @@ export default function SignInPage() {
   useEffect(() => {
     if (!uiLoaded || !containerRef.current || typeof window === "undefined") return;
 
+    if (!isPublicConfigValid(firebaseConfig)) {
+      // eslint-disable-next-line no-console
+      console.error('Firebase config is invalid on the client. Check NEXT_PUBLIC_* env vars. Values:', {
+        hasApiKey: !!firebaseConfig.apiKey,
+        hasAuthDomain: !!firebaseConfig.authDomain,
+        hasProjectId: !!firebaseConfig.projectId,
+        hasStorageBucket: !!firebaseConfig.storageBucket,
+        hasMessagingSenderId: !!firebaseConfig.messagingSenderId,
+        hasAppId: !!firebaseConfig.appId,
+      });
+      return;
+    }
+
     if (!window.firebase?.apps?.length) {
-      window.firebase.initializeApp(firebaseConfig);
+      try {
+        window.firebase.initializeApp(firebaseConfig);
+      } catch (e) {
+        // Ignore duplicate app initialization in case modular SDK already initialized
+        // eslint-disable-next-line no-console
+        console.warn('firebase compat initializeApp warning:', e);
+      }
     }
 
     const auth = window.firebase.auth();
